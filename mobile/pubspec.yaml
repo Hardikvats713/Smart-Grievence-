@@ -1,0 +1,42 @@
+name: smart_grievance
+description: Smart Grievance - Report, Track, Resolve civic grievances.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.2.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/smart_grievance_logo.png
+    - assets/images/smart_grievance_icon.png
+    - assets/images/splash_cityscape.png
+    - assets/images/onboarding_your_voice.png
+    - assets/images/onboarding_easy_reporting.png
+    - assets/images/onboarding_city_resolved.png
+    - assets/images/get_started_cityscape.png
+    - assets/images/dashboard_bottom_right_wave.png
+    - assets/images/category_bottom_right_wave.png
+
+  fonts:
+    - family: Poppins
+      fonts:
+        - asset: assets/fonts/Poppins-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Poppins-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Poppins-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Poppins-Bold.ttf
+          weight: 700

@@ -1,0 +1,104 @@
+{
+  "name": "Smart Grievance",
+  "version": "1.0.0",
+  "colors": {
+    "background": "#F3EEE8",
+    "primary": "#17645F",
+    "accent": "#E46A3D",
+    "secondarySurface": "#DDEEE9",
+    "white": "#FFFFFF",
+    "primaryText": "#263B38",
+    "secondaryText": "#78847F",
+    "border": "#E5E9E6",
+    "disabled": "#B8C2BE",
+    "success": "#368568",
+    "warning": "#D9A441",
+    "error": "#C94D4D",
+    "information": "#5189B5"
+  },
+  "typography": {
+    "family": "Poppins",
+    "styles": {
+      "display": {
+        "size": 28,
+        "weight": 700
+      },
+      "screenHeading": {
+        "size": 22,
+        "weight": 600
+      },
+      "sectionHeading": {
+        "size": 18,
+        "weight": 600
+      },
+      "cardHeading": {
+        "size": 16,
+        "weight": 500
+      },
+      "body": {
+        "size": 14,
+        "weight": 400
+      },
+      "supporting": {
+        "size": 12,
+        "weight": 400
+      },
+      "button": {
+        "size": 15,
+        "weight": 600
+      },
+      "metadata": {
+        "size": 11,
+        "weight": 500
+      }
+    }
+  },
+  "spacing": [
+    4,
+    8,
+    12,
+    16,
+    24,
+    32,
+    40
+  ],
+  "radii": {
+    "input": [
+      12,
+      16
+    ],
+    "card": [
+      16,
+      20
+    ],
+    "button": [
+      16,
+      20
+    ]
+  },
+  "glassmorphism": {
+    "surfaceOpacityPercent": [
+      65,
+      80
+    ],
+    "blurSigma": [
+      12,
+      18
+    ],
+    "borderOpacityPercent": [
+      50,
+      70
+    ],
+    "transitionMs": [
+      180,
+      250
+    ],
+    "pressedScale": 0.98
+  },
+  "navigation": [
+    "Home",
+    "My Grievances",
+    "Map",
+    "Profile"
+  ]
+}

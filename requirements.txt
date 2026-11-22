@@ -1,0 +1,4 @@
+# Root-level Python tooling requirements.
+# The AI service has its own pinned-range dependencies in ai-service/requirements.txt.
+# Install only if using Python tooling:
+-r ai-service/requirements.txt
