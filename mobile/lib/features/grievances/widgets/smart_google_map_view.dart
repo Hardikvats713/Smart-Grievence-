@@ -6,8 +6,8 @@ import '../../../core/theme/app_colors.dart';
 import '../models/grievance_model.dart';
 import 'live_map_view.dart';
 
-/// Real Google Map widget for Android/iOS/Web, with seamless fallback to
-/// high-fidelity cartography for widget tests and offline environments.
+/// Real Google Map widget for Android/iOS/Web, with fallback to high-fidelity
+/// cartography in headless widget tests to prevent platform channel crashes.
 class SmartGoogleMapView extends StatefulWidget {
   const SmartGoogleMapView({
     super.key,
@@ -107,7 +107,7 @@ class _SmartGoogleMapViewState extends State<SmartGoogleMapView> {
         );
       }
     } else {
-      // Single marker for grievance location picking
+      // Single draggable marker for grievance location picking
       markers.add(
         Marker(
           markerId: const MarkerId('selected_grievance_location'),
@@ -147,6 +147,7 @@ class _SmartGoogleMapViewState extends State<SmartGoogleMapView> {
       );
     }
 
+    // Real native/web Google Maps
     return ClipRRect(
       borderRadius: BorderRadius.circular(18),
       child: Container(
@@ -170,6 +171,9 @@ class _SmartGoogleMapViewState extends State<SmartGoogleMapView> {
               onMapCreated: (controller) {
                 _mapController = controller;
                 widget.onMapCreated?.call(controller);
+                if (kDebugMode) {
+                  debugPrint('[SmartGoogleMapView] GoogleMap created successfully.');
+                }
               },
               onTap: widget.isInteractive && widget.grievances.isEmpty
                   ? (pos) {

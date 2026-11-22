@@ -9,6 +9,9 @@ Future<void> showGrievanceMediaPicker({
   required void Function(String fileName, Uint8List bytes) onMediaPicked,
   void Function(String error)? onError,
 }) async {
+  // Capture the outer scaffold context before opening sheet
+  final outerContext = context;
+
   showModalBottomSheet<void>(
     context: context,
     backgroundColor: AppColors.white,
@@ -61,43 +64,57 @@ Future<void> showGrievanceMediaPicker({
                     fontWeight: FontWeight.w500,
                   ),
                 ),
-                onTap: () async {
+                onTap: () {
                   Navigator.of(bottomSheetContext).pop();
-                  try {
-                    final picker = ImagePicker();
-                    final XFile? file = await picker.pickImage(
-                      source: ImageSource.gallery,
-                      maxWidth: 1600,
-                      maxHeight: 1600,
-                      imageQuality: 85,
-                    );
-                    if (file != null) {
-                      final bytes = await file.readAsBytes();
-                      onMediaPicked(file.name, bytes);
-                    }
-                  } catch (e) {
-                    if (kDebugMode) {
-                      debugPrint('[GrievanceMediaPicker] Gallery pick error: $e');
-                    }
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          backgroundColor: AppColors.error,
-                          content: Text('Could not access gallery: $e'),
-                          action: SnackBarAction(
-                            label: 'Retry',
-                            textColor: AppColors.white,
-                            onPressed: () => showGrievanceMediaPicker(
-                              context: context,
-                              onMediaPicked: onMediaPicked,
-                              onError: onError,
+                  // Delay to let the sheet fully dismiss before opening file picker
+                  Future.delayed(const Duration(milliseconds: 150), () async {
+                    try {
+                      final picker = ImagePicker();
+                      if (kDebugMode) {
+                        debugPrint('[GrievanceMediaPicker] Opening gallery picker...');
+                      }
+                      final XFile? file = await picker.pickImage(
+                        source: ImageSource.gallery,
+                        maxWidth: 1600,
+                        maxHeight: 1600,
+                        imageQuality: 85,
+                      );
+                      if (file != null) {
+                        final bytes = await file.readAsBytes();
+                        if (kDebugMode) {
+                          debugPrint('[GrievanceMediaPicker] Gallery image selected: '
+                              '${file.name}, ${bytes.length} bytes');
+                        }
+                        onMediaPicked(file.name, bytes);
+                      } else {
+                        if (kDebugMode) {
+                          debugPrint('[GrievanceMediaPicker] Gallery selection cancelled.');
+                        }
+                      }
+                    } catch (e) {
+                      if (kDebugMode) {
+                        debugPrint('[GrievanceMediaPicker] Gallery pick error: $e');
+                      }
+                      if (outerContext.mounted) {
+                        ScaffoldMessenger.of(outerContext).showSnackBar(
+                          SnackBar(
+                            backgroundColor: AppColors.error,
+                            content: Text('Could not access gallery: $e'),
+                            action: SnackBarAction(
+                              label: 'Retry',
+                              textColor: AppColors.white,
+                              onPressed: () => showGrievanceMediaPicker(
+                                context: outerContext,
+                                onMediaPicked: onMediaPicked,
+                                onError: onError,
+                              ),
                             ),
                           ),
-                        ),
-                      );
+                        );
+                      }
+                      onError?.call(e.toString());
                     }
-                    onError?.call(e.toString());
-                  }
+                  });
                 },
               ),
               ListTile(
@@ -110,43 +127,56 @@ Future<void> showGrievanceMediaPicker({
                     fontWeight: FontWeight.w500,
                   ),
                 ),
-                onTap: () async {
+                onTap: () {
                   Navigator.of(bottomSheetContext).pop();
-                  try {
-                    final picker = ImagePicker();
-                    final XFile? file = await picker.pickImage(
-                      source: ImageSource.camera,
-                      maxWidth: 1600,
-                      maxHeight: 1600,
-                      imageQuality: 85,
-                    );
-                    if (file != null) {
-                      final bytes = await file.readAsBytes();
-                      onMediaPicked(file.name, bytes);
-                    }
-                  } catch (e) {
-                    if (kDebugMode) {
-                      debugPrint('[GrievanceMediaPicker] Camera capture error: $e');
-                    }
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          backgroundColor: AppColors.error,
-                          content: Text('Could not access camera: $e'),
-                          action: SnackBarAction(
-                            label: 'Retry',
-                            textColor: AppColors.white,
-                            onPressed: () => showGrievanceMediaPicker(
-                              context: context,
-                              onMediaPicked: onMediaPicked,
-                              onError: onError,
+                  Future.delayed(const Duration(milliseconds: 150), () async {
+                    try {
+                      final picker = ImagePicker();
+                      if (kDebugMode) {
+                        debugPrint('[GrievanceMediaPicker] Opening camera...');
+                      }
+                      final XFile? file = await picker.pickImage(
+                        source: ImageSource.camera,
+                        maxWidth: 1600,
+                        maxHeight: 1600,
+                        imageQuality: 85,
+                      );
+                      if (file != null) {
+                        final bytes = await file.readAsBytes();
+                        if (kDebugMode) {
+                          debugPrint('[GrievanceMediaPicker] Camera image captured: '
+                              '${file.name}, ${bytes.length} bytes');
+                        }
+                        onMediaPicked(file.name, bytes);
+                      } else {
+                        if (kDebugMode) {
+                          debugPrint('[GrievanceMediaPicker] Camera capture cancelled.');
+                        }
+                      }
+                    } catch (e) {
+                      if (kDebugMode) {
+                        debugPrint('[GrievanceMediaPicker] Camera capture error: $e');
+                      }
+                      if (outerContext.mounted) {
+                        ScaffoldMessenger.of(outerContext).showSnackBar(
+                          SnackBar(
+                            backgroundColor: AppColors.error,
+                            content: Text('Could not access camera: $e'),
+                            action: SnackBarAction(
+                              label: 'Retry',
+                              textColor: AppColors.white,
+                              onPressed: () => showGrievanceMediaPicker(
+                                context: outerContext,
+                                onMediaPicked: onMediaPicked,
+                                onError: onError,
+                              ),
                             ),
                           ),
-                        ),
-                      );
+                        );
+                      }
+                      onError?.call(e.toString());
                     }
-                    onError?.call(e.toString());
-                  }
+                  });
                 },
               ),
             ],

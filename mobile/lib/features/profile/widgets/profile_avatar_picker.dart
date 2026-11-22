@@ -1,4 +1,4 @@
-import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../logic/photo_picker_service.dart';
@@ -20,7 +20,84 @@ class ProfileAvatarPicker extends StatelessWidget {
 
   bool get _hasPhoto => photoBytes != null || (photoPath != null && photoPath!.isNotEmpty);
 
-  Future<void> _showPickerOptions(BuildContext context) async {
+  Future<void> _pickFromGallery(BuildContext outerContext) async {
+    try {
+      if (kDebugMode) {
+        debugPrint('[ProfileAvatarPicker] Gallery picker invoked');
+      }
+      final result = await pickerService.pickFromGallery();
+      if (kDebugMode) {
+        debugPrint('[ProfileAvatarPicker] Gallery result: hasData=${result?.hasData}, '
+            'bytes=${result?.bytes?.length}, path=${result?.filePath}, error=${result?.errorMessage}');
+      }
+      if (result != null && result.hasData) {
+        onPhotoSelected(result);
+      } else if (result?.errorMessage != null) {
+        if (outerContext.mounted) {
+          ScaffoldMessenger.of(outerContext).showSnackBar(
+            SnackBar(
+              backgroundColor: AppColors.error,
+              content: Text(result!.errorMessage!),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('[ProfileAvatarPicker] Gallery exception: $e');
+      }
+      if (outerContext.mounted) {
+        ScaffoldMessenger.of(outerContext).showSnackBar(
+          SnackBar(
+            backgroundColor: AppColors.error,
+            content: Text('Could not open gallery: $e'),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _captureWithCamera(BuildContext outerContext) async {
+    try {
+      if (kDebugMode) {
+        debugPrint('[ProfileAvatarPicker] Camera capture invoked');
+      }
+      final result = await pickerService.captureWithCamera();
+      if (kDebugMode) {
+        debugPrint('[ProfileAvatarPicker] Camera result: hasData=${result?.hasData}, '
+            'bytes=${result?.bytes?.length}, path=${result?.filePath}, error=${result?.errorMessage}');
+      }
+      if (result != null && result.hasData) {
+        onPhotoSelected(result);
+      } else if (result?.errorMessage != null) {
+        if (outerContext.mounted) {
+          ScaffoldMessenger.of(outerContext).showSnackBar(
+            SnackBar(
+              backgroundColor: AppColors.error,
+              content: Text(result!.errorMessage!),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('[ProfileAvatarPicker] Camera exception: $e');
+      }
+      if (outerContext.mounted) {
+        ScaffoldMessenger.of(outerContext).showSnackBar(
+          SnackBar(
+            backgroundColor: AppColors.error,
+            content: Text('Could not open camera: $e'),
+          ),
+        );
+      }
+    }
+  }
+
+  void _showPickerOptions(BuildContext context) {
+    // Capture the outer scaffold context before opening the bottom sheet
+    final outerContext = context;
+
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: AppColors.white,
@@ -63,32 +140,15 @@ class ProfileAvatarPicker extends StatelessWidget {
                       fontWeight: FontWeight.w500,
                     ),
                   ),
-                  onTap: () async {
+                  onTap: () {
+                    // Close the bottom sheet first, then open the picker
                     Navigator.of(bottomSheetContext).pop();
-                    try {
-                      final result = await pickerService.pickFromGallery();
-                      if (result != null && result.hasData) {
-                        onPhotoSelected(result);
-                      } else if (result?.errorMessage != null) {
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              backgroundColor: AppColors.error,
-                              content: Text(result!.errorMessage!),
-                            ),
-                          );
-                        }
-                      }
-                    } catch (e) {
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            backgroundColor: AppColors.error,
-                            content: Text('Could not open gallery: $e'),
-                          ),
-                        );
-                      }
-                    }
+                    // Use a slight delay to ensure the sheet is fully dismissed
+                    // before the file picker dialog opens (critical on Web)
+                    Future.delayed(const Duration(milliseconds: 150), () {
+                      // ignore: use_build_context_synchronously
+                      _pickFromGallery(outerContext);
+                    });
                   },
                 ),
                 ListTile(
@@ -101,32 +161,12 @@ class ProfileAvatarPicker extends StatelessWidget {
                       fontWeight: FontWeight.w500,
                     ),
                   ),
-                  onTap: () async {
+                  onTap: () {
                     Navigator.of(bottomSheetContext).pop();
-                    try {
-                      final result = await pickerService.captureWithCamera();
-                      if (result != null && result.hasData) {
-                        onPhotoSelected(result);
-                      } else if (result?.errorMessage != null) {
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              backgroundColor: AppColors.error,
-                              content: Text(result!.errorMessage!),
-                            ),
-                          );
-                        }
-                      }
-                    } catch (e) {
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            backgroundColor: AppColors.error,
-                            content: Text('Could not open camera: $e'),
-                          ),
-                        );
-                      }
-                    }
+                    Future.delayed(const Duration(milliseconds: 150), () {
+                      // ignore: use_build_context_synchronously
+                      _captureWithCamera(outerContext);
+                    });
                   },
                 ),
                 if (_hasPhoto) ...[
@@ -233,4 +273,3 @@ class ProfileAvatarPicker extends StatelessWidget {
     );
   }
 }
-
