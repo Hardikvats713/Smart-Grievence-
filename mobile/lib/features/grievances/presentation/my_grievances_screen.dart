@@ -28,7 +28,14 @@ class _MyGrievancesScreenState extends State<MyGrievancesScreen> {
   void initState() {
     super.initState();
     _controller = widget.controller ?? GrievanceController.instance;
+    _controller.addListener(_loadData);
     _loadData();
+  }
+
+  @override
+  void dispose() {
+    _controller.removeListener(_loadData);
+    super.dispose();
   }
 
   Future<void> _loadData() async {

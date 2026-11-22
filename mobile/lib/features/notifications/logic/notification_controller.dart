@@ -61,6 +61,11 @@ class NotificationController extends ChangeNotifier {
     ]);
   }
 
+  void addNotification(AppNotificationItem item) {
+    _notifications.insert(0, item);
+    notifyListeners();
+  }
+
   void markAsRead(String id) {
     final idx = _notifications.indexWhere((n) => n.id == id);
     if (idx != -1 && !_notifications[idx].isRead) {

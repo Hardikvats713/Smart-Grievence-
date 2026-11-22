@@ -143,10 +143,8 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
                             Navigator.of(context).pushNamed('/my-grievances'),
                         onGrievanceMapTap: () =>
                             Navigator.of(context).pushNamed('/grievance-map'),
-                        onViewUpdatesTap: () => _showFeaturePlaceholder(
-                          'View Updates',
-                          '/updates',
-                        ),
+                        onViewUpdatesTap: () =>
+                            Navigator.of(context).pushNamed('/notifications'),
                         onHowItWorksTap: () =>
                             Navigator.of(context).pushNamed('/how-it-works'),
                       ),

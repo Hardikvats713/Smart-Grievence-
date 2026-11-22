@@ -19,6 +19,18 @@ abstract class GrievanceService {
     double? longitude,
     GrievanceCategory? filterCategory,
   });
+  Future<Grievance?> reopenGrievance({
+    required String id,
+    required String reason,
+    required String details,
+    List<String> attachments = const [],
+  });
+  Future<Grievance?> submitFeedback({
+    required String id,
+    required bool isResolved,
+    required int rating,
+    String? comments,
+  });
 }
 
 /// In-memory stub repository conforming to real workflow and data contract.
@@ -287,5 +299,67 @@ class StubGrievanceService implements GrievanceService {
       return List.unmodifiable(_grievances);
     }
     return _grievances.where((g) => g.category == filterCategory).toList();
+  }
+
+  @override
+  Future<Grievance?> reopenGrievance({
+    required String id,
+    required String reason,
+    required String details,
+    List<String> attachments = const [],
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+    final index = _grievances.indexWhere(
+      (g) => g.id == id || g.referenceNumber == id,
+    );
+    if (index == -1) return null;
+
+    final existing = _grievances[index];
+    final updatedTimeline = List<GrievanceTimelineEvent>.from(existing.timeline);
+
+    updatedTimeline.add(
+      GrievanceTimelineEvent(
+        title: 'Reopened',
+        timestamp: 'Just now',
+        description: 'Citizen reopened grievance: $reason. $details'.trim(),
+        isCompleted: true,
+      ),
+    );
+
+    final updated = existing.copyWith(
+      status: GrievanceStatus.inProgress,
+      lastUpdatedText: 'Reopened just now',
+      timeline: updatedTimeline,
+      reopenReason: reason,
+      reopenDetails: details,
+    );
+
+    _grievances[index] = updated;
+    return updated;
+  }
+
+  @override
+  Future<Grievance?> submitFeedback({
+    required String id,
+    required bool isResolved,
+    required int rating,
+    String? comments,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 400));
+    final index = _grievances.indexWhere(
+      (g) => g.id == id || g.referenceNumber == id,
+    );
+    if (index == -1) return null;
+
+    final existing = _grievances[index];
+    final updated = existing.copyWith(
+      feedbackRating: rating,
+      feedbackComments: comments,
+      isFeedbackResolved: isResolved,
+      lastUpdatedText: 'Feedback submitted',
+    );
+
+    _grievances[index] = updated;
+    return updated;
   }
 }

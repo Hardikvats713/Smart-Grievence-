@@ -23,7 +23,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
   @override
   void initState() {
     super.initState();
-    _profileController = widget.profileController ?? StubProfileController();
+    _profileController = widget.profileController ?? StubProfileController.instance;
   }
 
   void _showLogoutDialog() {
@@ -63,6 +63,9 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
           ElevatedButton(
             onPressed: () {
               Navigator.of(ctx).pop();
+              if (_profileController is StubProfileController) {
+                (_profileController as StubProfileController).clearSession();
+              }
               Navigator.of(context).pushNamedAndRemoveUntil(
                 '/get-started',
                 (route) => false,
@@ -103,16 +106,21 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final currentProfile = _profileController.currentProfile;
-    final displayName = currentProfile?.fullName.isNotEmpty == true
-        ? currentProfile!.fullName
-        : 'Rahul Sharma';
-    final rawPhone = currentProfile?.phoneNumber.isNotEmpty == true
-        ? currentProfile!.phoneNumber
-        : '9876543210';
-    final displayPhone = formatIndianMobile(rawPhone);
+    return ListenableBuilder(
+      listenable: _profileController is Listenable
+          ? (_profileController as Listenable)
+          : ValueNotifier<int>(0),
+      builder: (context, _) {
+        final currentProfile = _profileController.currentProfile;
+        final displayName = currentProfile?.fullName.isNotEmpty == true
+            ? currentProfile!.fullName
+            : 'Rahul Sharma';
+        final rawPhone = currentProfile?.phoneNumber.isNotEmpty == true
+            ? currentProfile!.phoneNumber
+            : '9876543210';
+        final displayPhone = formatIndianMobile(rawPhone);
 
-    return Scaffold(
+        return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
         child: Column(
@@ -284,6 +292,8 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
           }
         },
       ),
+    );
+      },
     );
   }
 }

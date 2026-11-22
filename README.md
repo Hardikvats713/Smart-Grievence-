@@ -10,7 +10,7 @@
 
 <p align="center">
   <a href="#-screens-gallery"><img src="https://img.shields.io/badge/Screens-25%20Completed-17645F?style=for-the-badge&logo=flutter" alt="Screens: 25 Completed" /></a>
-  <a href="#-automated-testing--quality-gates"><img src="https://img.shields.io/badge/Tests-131%2B%20Passing%20(100%25)-368568?style=for-the-badge&logo=checkmarx" alt="Tests: 131+ Passing" /></a>
+  <a href="#-automated-testing--quality-gates"><img src="https://img.shields.io/badge/Tests-138%2B%20Passing%20(100%25)-368568?style=for-the-badge&logo=checkmarx" alt="Tests: 138+ Passing" /></a>
   <a href="#-security--privacy-first-posture"><img src="https://img.shields.io/badge/Security-Audited%20%26%20Zero%20Leaks-E46A3D?style=for-the-badge&logo=shield" alt="Security: Zero Leaks" /></a>
   <a href="#-technology-stack"><img src="https://img.shields.io/badge/Flutter-3.x-02569B?style=for-the-badge&logo=flutter" alt="Flutter 3.x" /></a>
   <a href="#-technology-stack"><img src="https://img.shields.io/badge/Dart-3.x-0175C2?style=for-the-badge&logo=dart" alt="Dart 3.x" /></a>

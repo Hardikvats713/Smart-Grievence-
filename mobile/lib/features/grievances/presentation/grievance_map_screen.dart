@@ -29,7 +29,14 @@ class _GrievanceMapScreenState extends State<GrievanceMapScreen> {
   void initState() {
     super.initState();
     _controller = widget.controller ?? GrievanceController.instance;
+    _controller.addListener(_loadMapData);
     _loadMapData();
+  }
+
+  @override
+  void dispose() {
+    _controller.removeListener(_loadMapData);
+    super.dispose();
   }
 
   Future<void> _loadMapData() async {

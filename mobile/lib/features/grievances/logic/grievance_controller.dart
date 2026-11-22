@@ -1,4 +1,6 @@
 import 'package:flutter/foundation.dart';
+import '../../notifications/logic/notification_controller.dart';
+import '../../notifications/models/notification_model.dart';
 import '../models/grievance_model.dart';
 import '../services/grievance_service.dart';
 
@@ -125,6 +127,21 @@ class GrievanceController extends ChangeNotifier {
       );
 
       _lastSubmittedGrievance = result;
+
+      // Automatically register a notification for this citizen
+      NotificationController.instance.addNotification(
+        AppNotificationItem(
+          id: 'n-${DateTime.now().millisecondsSinceEpoch}',
+          type: NotificationType.submissionConfirmed,
+          title: 'Grievance Registered: ${result.referenceNumber}',
+          description: 'Your grievance "${result.title}" has been successfully submitted.',
+          timeAgo: 'Just now',
+          grievanceId: result.id,
+          isRead: false,
+          dateGroup: 'Today',
+        ),
+      );
+
       // Reset draft after successful registration
       _draft = const GrievanceDraft();
       _isSubmitting = false;
@@ -136,6 +153,66 @@ class GrievanceController extends ChangeNotifier {
       notifyListeners();
       return null;
     }
+  }
+
+  Future<Grievance?> reopenGrievance({
+    required String id,
+    required String reason,
+    required String details,
+    List<String> attachments = const [],
+  }) async {
+    final updated = await _service.reopenGrievance(
+      id: id,
+      reason: reason,
+      details: details,
+      attachments: attachments,
+    );
+    if (updated != null) {
+      NotificationController.instance.addNotification(
+        AppNotificationItem(
+          id: 'n-${DateTime.now().millisecondsSinceEpoch}',
+          type: NotificationType.grievanceReopened,
+          title: 'Grievance Reopened: ${updated.referenceNumber}',
+          description: 'Reopen request submitted for review: $reason',
+          timeAgo: 'Just now',
+          grievanceId: updated.id,
+          isRead: false,
+          dateGroup: 'Today',
+        ),
+      );
+      notifyListeners();
+    }
+    return updated;
+  }
+
+  Future<Grievance?> submitFeedback({
+    required String id,
+    required bool isResolved,
+    required int rating,
+    String? comments,
+  }) async {
+    final updated = await _service.submitFeedback(
+      id: id,
+      isResolved: isResolved,
+      rating: rating,
+      comments: comments,
+    );
+    if (updated != null) {
+      NotificationController.instance.addNotification(
+        AppNotificationItem(
+          id: 'n-${DateTime.now().millisecondsSinceEpoch}',
+          type: NotificationType.statusUpdated,
+          title: 'Feedback Registered: ${updated.referenceNumber}',
+          description: 'Citizen satisfaction feedback recorded ($rating/5 stars).',
+          timeAgo: 'Just now',
+          grievanceId: updated.id,
+          isRead: false,
+          dateGroup: 'Today',
+        ),
+      );
+      notifyListeners();
+    }
+    return updated;
   }
 
   void resetDraft() {

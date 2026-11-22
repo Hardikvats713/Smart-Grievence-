@@ -110,14 +110,17 @@ class _GrievanceDetailTimelineScreenState
                 children: [
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: () {
-                        Navigator.of(context).pushNamed(
+                      onPressed: () async {
+                        final res = await Navigator.of(context).pushNamed(
                           '/grievance/reopen',
                           arguments: {
                             'reference': item.referenceNumber,
                             'id': item.id,
                           },
                         );
+                        if (res == true) {
+                          _fetchGrievance();
+                        }
                       },
                       style: OutlinedButton.styleFrom(
                         side: const BorderSide(color: AppColors.accent),
@@ -139,14 +142,17 @@ class _GrievanceDetailTimelineScreenState
                   const SizedBox(width: 12),
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: () {
-                        Navigator.of(context).pushNamed(
+                      onPressed: () async {
+                        final res = await Navigator.of(context).pushNamed(
                           '/grievance/feedback',
                           arguments: {
                             'reference': item.referenceNumber,
                             'id': item.id,
                           },
                         );
+                        if (res == true) {
+                          _fetchGrievance();
+                        }
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
@@ -180,7 +186,13 @@ class _GrievanceDetailTimelineScreenState
                   const SizedBox(height: 6),
                   GrievanceHeader(
                     title: 'Grievance Details',
-                    onBack: () => Navigator.of(context).maybePop(),
+                    onBack: () {
+                      if (Navigator.of(context).canPop()) {
+                        Navigator.of(context).pop();
+                      } else {
+                        Navigator.of(context).pushReplacementNamed('/home');
+                      }
+                    },
                   ),
                   const SizedBox(height: 8),
 
@@ -584,6 +596,89 @@ class _GrievanceDetailTimelineScreenState
                 color: AppColors.secondaryText,
               ),
             ),
+          if (item.feedbackRating != null) ...[
+            const SizedBox(height: 16),
+            const Divider(color: AppColors.border),
+            const SizedBox(height: 12),
+            const Text(
+              'Citizen Feedback',
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppColors.secondaryText,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                ...List.generate(
+                  5,
+                  (star) => Icon(
+                    star < item.feedbackRating! ? Icons.star_rounded : Icons.star_border_rounded,
+                    color: AppColors.warning,
+                    size: 18,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '${item.feedbackRating} / 5',
+                  style: const TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.primaryText,
+                  ),
+                ),
+              ],
+            ),
+            if (item.feedbackComments != null && item.feedbackComments!.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                item.feedbackComments!,
+                style: const TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 12,
+                  color: AppColors.primaryText,
+                ),
+              ),
+            ],
+          ],
+          if (item.reopenReason != null) ...[
+            const SizedBox(height: 16),
+            const Divider(color: AppColors.border),
+            const SizedBox(height: 12),
+            const Text(
+              'Reopen History',
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppColors.accent,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Reason: ${item.reopenReason}',
+              style: const TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: AppColors.primaryText,
+              ),
+            ),
+            if (item.reopenDetails != null && item.reopenDetails!.isNotEmpty) ...[
+              const SizedBox(height: 2),
+              Text(
+                item.reopenDetails!,
+                style: const TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 12,
+                  color: AppColors.secondaryText,
+                ),
+              ),
+            ],
+          ],
         ],
       ),
     );

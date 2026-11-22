@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
+import '../logic/grievance_controller.dart';
 import '../widgets/grievance_header.dart';
 
 /// Screen 25 — Reopen Grievance.
@@ -8,10 +9,12 @@ class ReopenGrievanceScreen extends StatefulWidget {
     super.key,
     this.grievanceReference = 'SG2503170005',
     this.grievanceId = 'g-2',
+    this.controller,
   });
 
   final String grievanceReference;
   final String grievanceId;
+  final GrievanceController? controller;
 
   @override
   State<ReopenGrievanceScreen> createState() => _ReopenGrievanceScreenState();
@@ -46,8 +49,22 @@ class _ReopenGrievanceScreenState extends State<ReopenGrievanceScreen> {
   Future<void> _submitReopenRequest() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
+    if (_selectedReason == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a reason for reopening.')),
+      );
+      return;
+    }
+
     setState(() => _isSubmitting = true);
-    await Future<void>.delayed(const Duration(milliseconds: 700));
+
+    final ctrl = widget.controller ?? GrievanceController.instance;
+    await ctrl.reopenGrievance(
+      id: widget.grievanceId,
+      reason: _selectedReason!,
+      details: _detailsController.text.trim(),
+      attachments: _evidenceList,
+    );
 
     if (mounted) {
       setState(() => _isSubmitting = false);
@@ -57,7 +74,7 @@ class _ReopenGrievanceScreenState extends State<ReopenGrievanceScreen> {
           content: Text('Reopen request submitted for review.'),
         ),
       );
-      Navigator.of(context).maybePop();
+      Navigator.of(context).maybePop(true);
     }
   }
 

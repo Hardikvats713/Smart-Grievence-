@@ -46,16 +46,29 @@ abstract class ProfileController {
 
 /// Stub implementation for development and testing.
 /// Replace with a real REST/GraphQL client when the backend is ready.
-class StubProfileController implements ProfileController {
-  static UserProfile? _storedProfile;
+class StubProfileController extends ChangeNotifier implements ProfileController {
+  StubProfileController();
+
+  static final StubProfileController instance = StubProfileController();
+  static UserProfile? _storedProfile = const UserProfile(
+    fullName: 'Rahul Sharma',
+    email: 'rahul.sharma@email.com',
+    district: 'Papum Pare',
+    phoneNumber: '9876543210',
+  );
 
   @override
   UserProfile? get currentProfile => _storedProfile;
 
+  void clearSession() {
+    _storedProfile = null;
+    notifyListeners();
+  }
+
   @override
   Future<ProfileResult> saveProfile(UserProfile profile) async {
     // Simulate brief network latency
-    await Future<void>.delayed(const Duration(milliseconds: 700));
+    await Future<void>.delayed(const Duration(milliseconds: 300));
 
     if (kDebugMode) {
       debugPrint('[StubProfileController] Saving profile for ${profile.fullName} (+91 ${profile.phoneNumber})');
@@ -77,6 +90,7 @@ class StubProfileController implements ProfileController {
     }
 
     _storedProfile = profile;
+    notifyListeners();
     return const ProfileResult(
       isSuccess: true,
       message: 'Profile saved successfully.',

@@ -37,7 +37,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   void initState() {
     super.initState();
-    _controller = widget.controller ?? StubProfileController();
+    _controller = widget.controller ?? StubProfileController.instance;
     _districtProvider = widget.districtProvider ?? const ConfiguredDistrictProvider();
 
     final current = _controller.currentProfile;

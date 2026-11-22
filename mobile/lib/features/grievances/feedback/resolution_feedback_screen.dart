@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
+import '../logic/grievance_controller.dart';
 import '../widgets/grievance_header.dart';
 
 /// Screen 24 — Resolution Feedback.
@@ -8,10 +9,12 @@ class ResolutionFeedbackScreen extends StatefulWidget {
     super.key,
     this.grievanceReference = 'SG2503170005',
     this.grievanceId = 'g-2',
+    this.controller,
   });
 
   final String grievanceReference;
   final String grievanceId;
+  final GrievanceController? controller;
 
   @override
   State<ResolutionFeedbackScreen> createState() => _ResolutionFeedbackScreenState();
@@ -38,7 +41,14 @@ class _ResolutionFeedbackScreenState extends State<ResolutionFeedbackScreen> {
     }
 
     setState(() => _isSubmitting = true);
-    await Future<void>.delayed(const Duration(milliseconds: 600));
+
+    final ctrl = widget.controller ?? GrievanceController.instance;
+    await ctrl.submitFeedback(
+      id: widget.grievanceId,
+      isResolved: _isResolved!,
+      rating: _rating,
+      comments: _commentController.text.trim().isEmpty ? null : _commentController.text.trim(),
+    );
 
     if (mounted) {
       setState(() => _isSubmitting = false);
@@ -48,7 +58,7 @@ class _ResolutionFeedbackScreenState extends State<ResolutionFeedbackScreen> {
           content: Text('Thank you! Your feedback has been registered.'),
         ),
       );
-      Navigator.of(context).maybePop();
+      Navigator.of(context).maybePop(true);
     }
   }
 

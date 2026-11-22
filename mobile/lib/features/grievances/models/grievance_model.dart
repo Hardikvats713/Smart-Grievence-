@@ -75,6 +75,11 @@ class Grievance {
     this.lastUpdatedText = 'Updated recently',
     this.timeline = const [],
     this.distanceText,
+    this.feedbackRating,
+    this.feedbackComments,
+    this.isFeedbackResolved,
+    this.reopenReason,
+    this.reopenDetails,
   });
 
   final String id;
@@ -92,6 +97,11 @@ class Grievance {
   final String lastUpdatedText;
   final List<GrievanceTimelineEvent> timeline;
   final String? distanceText;
+  final int? feedbackRating;
+  final String? feedbackComments;
+  final bool? isFeedbackResolved;
+  final String? reopenReason;
+  final String? reopenDetails;
 
   Grievance copyWith({
     String? id,
@@ -109,6 +119,11 @@ class Grievance {
     String? lastUpdatedText,
     List<GrievanceTimelineEvent>? timeline,
     String? distanceText,
+    int? feedbackRating,
+    String? feedbackComments,
+    bool? isFeedbackResolved,
+    String? reopenReason,
+    String? reopenDetails,
   }) {
     return Grievance(
       id: id ?? this.id,
@@ -126,6 +141,11 @@ class Grievance {
       lastUpdatedText: lastUpdatedText ?? this.lastUpdatedText,
       timeline: timeline ?? this.timeline,
       distanceText: distanceText ?? this.distanceText,
+      feedbackRating: feedbackRating ?? this.feedbackRating,
+      feedbackComments: feedbackComments ?? this.feedbackComments,
+      isFeedbackResolved: isFeedbackResolved ?? this.isFeedbackResolved,
+      reopenReason: reopenReason ?? this.reopenReason,
+      reopenDetails: reopenDetails ?? this.reopenDetails,
     );
   }
 }

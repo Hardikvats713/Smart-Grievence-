@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import '../../notifications/logic/notification_controller.dart';
 import '../../profile/logic/profile_controller.dart';
 
 /// State representation for the Citizen Home Dashboard.
@@ -40,7 +41,7 @@ abstract class DashboardDataProvider {
 /// Default provider reading from the authenticated session / profile controller.
 class AuthenticatedDashboardDataProvider implements DashboardDataProvider {
   AuthenticatedDashboardDataProvider({ProfileController? profileController})
-      : _profileController = profileController ?? StubProfileController();
+      : _profileController = profileController ?? StubProfileController.instance;
 
   final ProfileController _profileController;
 
@@ -51,17 +52,31 @@ class AuthenticatedDashboardDataProvider implements DashboardDataProvider {
 
   @override
   Future<int> fetchUnreadNotificationCount() async {
-    // In production, fetch unread count from the notification API endpoint.
-    return 2;
+    return NotificationController.instance.unreadCount;
   }
 }
 
 /// Controller managing dashboard lifecycle and state.
 class DashboardController extends ChangeNotifier {
   DashboardController({DashboardDataProvider? dataProvider})
-      : _dataProvider = dataProvider ?? AuthenticatedDashboardDataProvider();
+      : _dataProvider = dataProvider ?? AuthenticatedDashboardDataProvider() {
+    // Listen to notification changes to keep unread count live
+    NotificationController.instance.addListener(_onExternalDataChanged);
+    StubProfileController.instance.addListener(_onExternalDataChanged);
+  }
 
   final DashboardDataProvider _dataProvider;
+
+  void _onExternalDataChanged() {
+    loadDashboardData();
+  }
+
+  @override
+  void dispose() {
+    NotificationController.instance.removeListener(_onExternalDataChanged);
+    StubProfileController.instance.removeListener(_onExternalDataChanged);
+    super.dispose();
+  }
 
   DashboardState _state = const DashboardState(isLoading: true);
   DashboardState get state => _state;

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../profile/saved_addresses/saved_addresses_controller.dart';
 import '../logic/grievance_controller.dart';
 import '../widgets/grievance_header.dart';
 import '../widgets/grievance_step_progress_indicator.dart';
@@ -32,15 +33,23 @@ class _GrievanceLocationScreenState extends State<GrievanceLocationScreen> {
   }
 
   void _onChangeLocationModal() {
+    final savedAddresses = SavedAddressesController.instance.addresses;
+
     showModalBottomSheet(
       context: context,
       backgroundColor: AppColors.white,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (ctx) {
         return Padding(
-          padding: const EdgeInsets.all(20),
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: 20,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -56,7 +65,7 @@ class _GrievanceLocationScreenState extends State<GrievanceLocationScreen> {
               ),
               const SizedBox(height: 12),
               TextField(
-                autofocus: true,
+                autofocus: false,
                 decoration: InputDecoration(
                   hintText: 'Type address, sector, or landmark',
                   hintStyle: const TextStyle(
@@ -82,7 +91,67 @@ class _GrievanceLocationScreenState extends State<GrievanceLocationScreen> {
                   Navigator.of(ctx).pop();
                 },
               ),
-              const SizedBox(height: 16),
+              if (savedAddresses.isNotEmpty) ...[
+                const SizedBox(height: 14),
+                const Text(
+                  'Choose from Saved Addresses',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.secondaryText,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                ...savedAddresses.map(
+                  (addr) => Container(
+                    margin: const EdgeInsets.only(bottom: 6),
+                    child: ListTile(
+                      dense: true,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        side: const BorderSide(color: AppColors.border),
+                      ),
+                      leading: Icon(
+                        addr.label.toLowerCase() == 'home'
+                            ? Icons.home_outlined
+                            : Icons.business_outlined,
+                        color: AppColors.primary,
+                        size: 20,
+                      ),
+                      title: Text(
+                        addr.label,
+                        style: const TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.primaryText,
+                        ),
+                      ),
+                      subtitle: Text(
+                        addr.formattedAddress,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 11,
+                          color: AppColors.secondaryText,
+                        ),
+                      ),
+                      onTap: () {
+                        _controller.updateLocation(
+                          address: addr.formattedAddress,
+                          lat: 27.1050,
+                          lng: 93.6210,
+                        );
+                        Navigator.of(ctx).pop();
+                      },
+                    ),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 8),
             ],
           ),
         );
