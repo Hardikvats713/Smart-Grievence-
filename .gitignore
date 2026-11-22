@@ -29,6 +29,12 @@ venv/
 .mypy_cache/
 .ruff_cache/
 
+# Local launch scripts with API keys
+run_app.bat
+run_app.sh
+mobile/run_app.bat
+mobile/run_app.sh
+
 # IDE / OS
 .idea/
 .vscode/
