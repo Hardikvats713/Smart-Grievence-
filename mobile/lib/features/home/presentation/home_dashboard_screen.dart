@@ -49,24 +49,6 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
     super.dispose();
   }
 
-  void _showFeaturePlaceholder(String featureName, String routeName) {
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        backgroundColor: AppColors.primary,
-        duration: const Duration(seconds: 2),
-        content: Text(
-          '$featureName ($routeName) is scheduled for subsequent release.',
-          style: const TextStyle(
-            fontFamily: 'Poppins',
-            fontSize: 12,
-            color: AppColors.white,
-          ),
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final state = _controller.state;

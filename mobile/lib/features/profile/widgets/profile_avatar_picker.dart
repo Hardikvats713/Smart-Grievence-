@@ -65,9 +65,29 @@ class ProfileAvatarPicker extends StatelessWidget {
                   ),
                   onTap: () async {
                     Navigator.of(bottomSheetContext).pop();
-                    final result = await pickerService.pickFromGallery();
-                    if (result != null) {
-                      onPhotoSelected(result);
+                    try {
+                      final result = await pickerService.pickFromGallery();
+                      if (result != null && result.hasData) {
+                        onPhotoSelected(result);
+                      } else if (result?.errorMessage != null) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              backgroundColor: AppColors.error,
+                              content: Text(result!.errorMessage!),
+                            ),
+                          );
+                        }
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            backgroundColor: AppColors.error,
+                            content: Text('Could not open gallery: $e'),
+                          ),
+                        );
+                      }
                     }
                   },
                 ),
@@ -83,9 +103,29 @@ class ProfileAvatarPicker extends StatelessWidget {
                   ),
                   onTap: () async {
                     Navigator.of(bottomSheetContext).pop();
-                    final result = await pickerService.captureWithCamera();
-                    if (result != null) {
-                      onPhotoSelected(result);
+                    try {
+                      final result = await pickerService.captureWithCamera();
+                      if (result != null && result.hasData) {
+                        onPhotoSelected(result);
+                      } else if (result?.errorMessage != null) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              backgroundColor: AppColors.error,
+                              content: Text(result!.errorMessage!),
+                            ),
+                          );
+                        }
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            backgroundColor: AppColors.error,
+                            content: Text('Could not open camera: $e'),
+                          ),
+                        );
+                      }
                     }
                   },
                 ),

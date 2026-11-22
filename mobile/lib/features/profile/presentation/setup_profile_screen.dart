@@ -60,9 +60,16 @@ class _SetupProfileScreenState extends State<SetupProfileScreen> {
   @override
   void initState() {
     super.initState();
-    _controller = widget.profileController ?? StubProfileController();
+    _controller = widget.profileController ?? StubProfileController.instance;
     _districtProvider = widget.districtProvider ?? const ConfiguredDistrictProvider();
     _photoService = widget.photoPickerService ?? const DefaultPhotoPickerService();
+
+    // Preserve previously selected avatar photo across navigation returns
+    final current = _controller.currentProfile;
+    if (current != null) {
+      if (current.photoBytes != null) _avatarBytes = current.photoBytes;
+      if (current.photoPath != null) _avatarPath = current.photoPath;
+    }
   }
 
   @override

@@ -14,6 +14,7 @@ class GrievanceDraft {
     this.latitude = 27.1025,
     this.longitude = 93.6160,
     this.attachments = const [],
+    this.attachmentBytes = const [],
   });
 
   final GrievanceCategory? category;
@@ -23,6 +24,7 @@ class GrievanceDraft {
   final double latitude;
   final double longitude;
   final List<String> attachments;
+  final List<dynamic> attachmentBytes;
 
   bool get isCategoryValid => category != null;
   bool get isDetailsValid => title.trim().isNotEmpty && description.trim().isNotEmpty;
@@ -37,6 +39,7 @@ class GrievanceDraft {
     double? latitude,
     double? longitude,
     List<String>? attachments,
+    List<dynamic>? attachmentBytes,
   }) {
     return GrievanceDraft(
       category: category ?? this.category,
@@ -46,6 +49,7 @@ class GrievanceDraft {
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
       attachments: attachments ?? this.attachments,
+      attachmentBytes: attachmentBytes ?? this.attachmentBytes,
     );
   }
 }
@@ -81,16 +85,21 @@ class GrievanceController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void addAttachment(String path) {
+  void addAttachment(String path, {dynamic bytes}) {
     final list = List<String>.from(_draft.attachments)..add(path);
-    _draft = _draft.copyWith(attachments: list);
+    final bytesList = List<dynamic>.from(_draft.attachmentBytes)..add(bytes);
+    _draft = _draft.copyWith(attachments: list, attachmentBytes: bytesList);
     notifyListeners();
   }
 
   void removeAttachment(int index) {
     if (index >= 0 && index < _draft.attachments.length) {
       final list = List<String>.from(_draft.attachments)..removeAt(index);
-      _draft = _draft.copyWith(attachments: list);
+      final bytesList = List<dynamic>.from(_draft.attachmentBytes);
+      if (index < bytesList.length) {
+        bytesList.removeAt(index);
+      }
+      _draft = _draft.copyWith(attachments: list, attachmentBytes: bytesList);
       notifyListeners();
     }
   }
@@ -124,6 +133,7 @@ class GrievanceController extends ChangeNotifier {
         latitude: _draft.latitude,
         longitude: _draft.longitude,
         attachments: _draft.attachments,
+        attachmentBytes: _draft.attachmentBytes,
       );
 
       _lastSubmittedGrievance = result;

@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../auth/logic/auth_controller.dart';
@@ -32,6 +33,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   late final TextEditingController _emailController;
   String? _selectedDistrict;
   late final String _verifiedPhone;
+  Uint8List? _avatarBytes;
+  String? _avatarPath;
   bool _isLoading = false;
 
   @override
@@ -45,6 +48,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _emailController = TextEditingController(text: current?.email ?? 'rahul.sharma@email.com');
     _selectedDistrict = current?.district ?? 'Papum Pare';
     _verifiedPhone = current?.phoneNumber ?? '9876543210';
+    _avatarBytes = current?.photoBytes;
+    _avatarPath = current?.photoPath;
   }
 
   @override
@@ -64,6 +69,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       email: _emailController.text.trim().isEmpty ? null : _emailController.text.trim(),
       district: _selectedDistrict ?? 'Papum Pare',
       phoneNumber: _verifiedPhone,
+      photoBytes: _avatarBytes,
+      photoPath: _avatarPath,
     );
 
     final result = await _controller.saveProfile(updated);
@@ -121,8 +128,19 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       // Profile Avatar with camera icon
                       Center(
                         child: ProfileAvatarPicker(
-                          photoBytes: _controller.currentProfile?.photoBytes,
-                          onPhotoSelected: (_) {},
+                          photoBytes: _avatarBytes,
+                          photoPath: _avatarPath,
+                          onPhotoSelected: (result) {
+                            setState(() {
+                              if (result == null) {
+                                _avatarBytes = null;
+                                _avatarPath = null;
+                              } else {
+                                _avatarBytes = result.bytes;
+                                _avatarPath = result.filePath;
+                              }
+                            });
+                          },
                         ),
                       ),
                       const SizedBox(height: 20),

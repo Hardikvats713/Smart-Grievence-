@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../logic/grievance_controller.dart';
@@ -132,6 +133,39 @@ class _ReviewSubmitScreenState extends State<ReviewSubmitScreen> {
                             (r) => r.settings.name == '/submit-grievance/details',
                           ),
                         ),
+                        if (draft.attachments.isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          SizedBox(
+                            height: 60,
+                            child: ListView.separated(
+                              scrollDirection: Axis.horizontal,
+                              itemCount: draft.attachments.length,
+                              separatorBuilder: (_, __) => const SizedBox(width: 8),
+                              itemBuilder: (context, i) {
+                                final hasBytes = i < draft.attachmentBytes.length &&
+                                    draft.attachmentBytes[i] is Uint8List &&
+                                    (draft.attachmentBytes[i] as Uint8List).isNotEmpty;
+                                return ClipRRect(
+                                  borderRadius: BorderRadius.circular(10),
+                                  child: Container(
+                                    width: 60,
+                                    height: 60,
+                                    color: AppColors.secondarySurface,
+                                    child: hasBytes
+                                        ? Image.memory(
+                                            draft.attachmentBytes[i] as Uint8List,
+                                            fit: BoxFit.cover,
+                                          )
+                                        : const Icon(
+                                            Icons.image_outlined,
+                                            color: AppColors.primary,
+                                          ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ],
                         const SizedBox(height: 24),
                       ],
                     ),

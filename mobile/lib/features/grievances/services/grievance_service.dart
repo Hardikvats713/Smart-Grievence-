@@ -13,6 +13,7 @@ abstract class GrievanceService {
     double? latitude,
     double? longitude,
     List<String> attachments = const [],
+    List<dynamic> attachmentBytes = const [],
   });
   Future<List<Grievance>> getNearbyGrievances({
     double? latitude,
@@ -234,6 +235,7 @@ class StubGrievanceService implements GrievanceService {
     double? latitude,
     double? longitude,
     List<String> attachments = const [],
+    List<dynamic> attachmentBytes = const [],
   }) async {
     await Future<void>.delayed(const Duration(milliseconds: 800));
 
@@ -253,6 +255,7 @@ class StubGrievanceService implements GrievanceService {
       longitude: longitude ?? 93.6160 + (Random().nextDouble() * 0.01 - 0.005),
       attachmentCount: attachments.length,
       attachmentPaths: attachments,
+      attachmentBytes: attachmentBytes,
       submittedDate: 'Just now',
       lastUpdatedText: 'Submitted just now',
       distanceText: 'Nearby',

@@ -64,7 +64,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
             onPressed: () {
               Navigator.of(ctx).pop();
               if (_profileController is StubProfileController) {
-                (_profileController as StubProfileController).clearSession();
+                _profileController.clearSession();
               }
               Navigator.of(context).pushNamedAndRemoveUntil(
                 '/get-started',
@@ -176,11 +176,20 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                             color: Color(0xFFE2EDE7),
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(
-                            Icons.person,
-                            color: AppColors.primary,
-                            size: 32,
-                          ),
+                          child: currentProfile?.photoBytes != null
+                              ? ClipOval(
+                                  child: Image.memory(
+                                    currentProfile!.photoBytes!,
+                                    width: 54,
+                                    height: 54,
+                                    fit: BoxFit.cover,
+                                  ),
+                                )
+                              : const Icon(
+                                  Icons.person,
+                                  color: AppColors.primary,
+                                  size: 32,
+                                ),
                         ),
                         const SizedBox(width: 14),
                         Expanded(

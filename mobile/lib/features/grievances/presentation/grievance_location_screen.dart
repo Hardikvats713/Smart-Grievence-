@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../profile/saved_addresses/saved_addresses_controller.dart';
 import '../logic/grievance_controller.dart';
+import '../services/location_service.dart';
+import '../services/places_service.dart';
 import '../widgets/grievance_header.dart';
 import '../widgets/grievance_step_progress_indicator.dart';
+import '../widgets/smart_google_map_view.dart';
 
 /// Screen 10 — Submit Grievance: Location.
 class GrievanceLocationScreen extends StatefulWidget {
@@ -20,7 +23,9 @@ class GrievanceLocationScreen extends StatefulWidget {
 
 class _GrievanceLocationScreenState extends State<GrievanceLocationScreen> {
   late final GrievanceController _controller;
-  Offset _pinPosition = const Offset(0.5, 0.45); // Normalized coordinates on map canvas
+  final PlacesService _placesService = PlacesService();
+  final LocationService _locationService = const LocationService();
+  bool _isAcquiringLocation = false;
 
   @override
   void initState() {
@@ -32,8 +37,42 @@ class _GrievanceLocationScreenState extends State<GrievanceLocationScreen> {
     Navigator.of(context).pushNamed('/submit-grievance/review');
   }
 
+  Future<void> _detectCurrentLocation() async {
+    setState(() => _isAcquiringLocation = true);
+    final result = await _locationService.getCurrentPosition();
+    if (mounted) {
+      setState(() => _isAcquiringLocation = false);
+      if (result.isSuccess && result.latitude != null && result.longitude != null) {
+        final address = await _placesService.reverseGeocode(result.latitude!, result.longitude!);
+        _controller.updateLocation(
+          address: address,
+          lat: result.latitude!,
+          lng: result.longitude!,
+        );
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            backgroundColor: AppColors.success,
+            content: Text('Current GPS coordinates verified.'),
+          ),
+        );
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: AppColors.error,
+            content: Text(result.errorMessage ?? 'Could not acquire GPS position.'),
+          ),
+        );
+      }
+    }
+  }
+
   void _onChangeLocationModal() {
     final savedAddresses = SavedAddressesController.instance.addresses;
+    String searchQuery = '';
+    List<PlaceSuggestion> searchResults = PlacesService.civicLandmarks;
+    bool isSearching = false;
 
     showModalBottomSheet(
       context: context,
@@ -43,117 +82,292 @@ class _GrievanceLocationScreenState extends State<GrievanceLocationScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (ctx) {
-        return Padding(
-          padding: EdgeInsets.only(
-            left: 20,
-            right: 20,
-            top: 20,
-            bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Enter Location / Landmark',
-                style: TextStyle(
-                  fontFamily: 'Poppins',
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.primaryText,
-                ),
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(ctx).size.height * 0.85,
               ),
-              const SizedBox(height: 12),
-              TextField(
-                autofocus: false,
-                decoration: InputDecoration(
-                  hintText: 'Type address, sector, or landmark',
-                  hintStyle: const TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 13,
-                    color: AppColors.secondaryText,
-                  ),
-                  filled: true,
-                  fillColor: AppColors.background,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
-                onSubmitted: (val) {
-                  if (val.trim().isNotEmpty) {
-                    _controller.updateLocation(
-                      address: val.trim(),
-                      lat: 27.1025,
-                      lng: 93.6160,
-                    );
-                  }
-                  Navigator.of(ctx).pop();
-                },
+              padding: EdgeInsets.only(
+                left: 20,
+                right: 20,
+                top: 20,
+                bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
               ),
-              if (savedAddresses.isNotEmpty) ...[
-                const SizedBox(height: 14),
-                const Text(
-                  'Choose from Saved Addresses',
-                  style: TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.secondaryText,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                ...savedAddresses.map(
-                  (addr) => Container(
-                    margin: const EdgeInsets.only(bottom: 6),
-                    child: ListTile(
-                      dense: true,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        side: const BorderSide(color: AppColors.border),
-                      ),
-                      leading: Icon(
-                        addr.label.toLowerCase() == 'home'
-                            ? Icons.home_outlined
-                            : Icons.business_outlined,
-                        color: AppColors.primary,
-                        size: 20,
-                      ),
-                      title: Text(
-                        addr.label,
-                        style: const TextStyle(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Change Location / Landmark',
+                        style: TextStyle(
                           fontFamily: 'Poppins',
-                          fontSize: 13,
+                          fontSize: 16,
                           fontWeight: FontWeight.w600,
                           color: AppColors.primaryText,
                         ),
                       ),
-                      subtitle: Text(
-                        addr.formattedAddress,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                      IconButton(
+                        onPressed: () => Navigator.of(ctx).pop(),
+                        icon: const Icon(Icons.close, size: 20, color: AppColors.secondaryText),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Search Field with Real-time Place Autocomplete
+                  TextField(
+                    autofocus: false,
+                    onChanged: (val) {
+                      setModalState(() {
+                        searchQuery = val;
+                        isSearching = true;
+                      });
+
+                      _placesService.searchPlaces(val).then((results) {
+                        if (ctx.mounted) {
+                          setModalState(() {
+                            searchResults = results;
+                            isSearching = false;
+                          });
+                        }
+                      });
+                    },
+                    decoration: InputDecoration(
+                      hintText: 'Search landmark, sector, or street name...',
+                      hintStyle: const TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 13,
+                        color: AppColors.secondaryText,
+                      ),
+                      prefixIcon: const Icon(
+                        Icons.search,
+                        color: AppColors.primary,
+                        size: 20,
+                      ),
+                      suffixIcon: isSearching
+                          ? const Padding(
+                              padding: EdgeInsets.all(12),
+                              child: SizedBox(
+                                width: 14,
+                                height: 14,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                            )
+                          : searchQuery.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.clear, size: 18),
+                                  onPressed: () {
+                                    setModalState(() {
+                                      searchQuery = '';
+                                      searchResults = PlacesService.civicLandmarks;
+                                    });
+                                  },
+                                )
+                              : null,
+                      filled: true,
+                      fillColor: AppColors.background,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                    onSubmitted: (val) async {
+                      if (val.trim().isNotEmpty) {
+                        _controller.updateLocation(
+                          address: val.trim(),
+                          lat: 27.1025,
+                          lng: 93.6160,
+                        );
+                        Navigator.of(ctx).pop();
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Option to use device GPS directly
+                  ListTile(
+                    dense: true,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      side: const BorderSide(color: AppColors.border),
+                    ),
+                    tileColor: AppColors.secondarySurface,
+                    leading: const Icon(Icons.my_location_rounded, color: AppColors.accent, size: 20),
+                    title: const Text(
+                      'Use Current Device Location',
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.accent,
+                      ),
+                    ),
+                    subtitle: const Text(
+                      'Detect GPS sensor coordinates',
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 11,
+                        color: AppColors.secondaryText,
+                      ),
+                    ),
+                    onTap: () async {
+                      Navigator.of(ctx).pop();
+                      await _detectCurrentLocation();
+                    },
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Autocomplete Place Suggestions Header
+                  Row(
+                    children: [
+                      const Icon(Icons.place_outlined, size: 16, color: AppColors.secondaryText),
+                      const SizedBox(width: 6),
+                      Text(
+                        searchQuery.isEmpty ? 'Suggested Civic Locations' : 'Matching Places (${searchResults.length})',
                         style: const TextStyle(
                           fontFamily: 'Poppins',
-                          fontSize: 11,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
                           color: AppColors.secondaryText,
                         ),
                       ),
-                      onTap: () {
-                        _controller.updateLocation(
-                          address: addr.formattedAddress,
-                          lat: 27.1050,
-                          lng: 93.6210,
-                        );
-                        Navigator.of(ctx).pop();
-                      },
-                    ),
+                    ],
                   ),
-                ),
-              ],
-              const SizedBox(height: 8),
-            ],
-          ),
+                  const SizedBox(height: 8),
+
+                  // Suggestion List
+                  Flexible(
+                    child: searchResults.isNotEmpty
+                        ? ListView.separated(
+                            shrinkWrap: true,
+                            itemCount: searchResults.length,
+                            separatorBuilder: (_, __) => const SizedBox(height: 6),
+                            itemBuilder: (context, i) {
+                              final place = searchResults[i];
+                              return ListTile(
+                                dense: true,
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  side: const BorderSide(color: AppColors.border),
+                                ),
+                                tileColor: AppColors.white,
+                                leading: Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.secondarySurface,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Icon(
+                                    Icons.location_on_outlined,
+                                    color: AppColors.primary,
+                                    size: 18,
+                                  ),
+                                ),
+                                title: Text(
+                                  place.name,
+                                  style: const TextStyle(
+                                    fontFamily: 'Poppins',
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.primaryText,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  place.latitude != null && place.longitude != null
+                                      ? '${place.area} • ${place.latitude!.toStringAsFixed(4)}° N, ${place.longitude!.toStringAsFixed(4)}° E'
+                                      : place.area,
+                                  style: const TextStyle(
+                                    fontFamily: 'Poppins',
+                                    fontSize: 11,
+                                    color: AppColors.secondaryText,
+                                  ),
+                                ),
+                                onTap: () async {
+                                  final resolved = await _placesService.resolveCoordinates(place);
+                                  _controller.updateLocation(
+                                    address: resolved.fullAddress,
+                                    lat: resolved.latitude ?? 27.1025,
+                                    lng: resolved.longitude ?? 93.6160,
+                                  );
+                                  if (ctx.mounted) {
+                                    Navigator.of(ctx).pop();
+                                  }
+                                },
+                              );
+                            },
+                          )
+                        : const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 16),
+                            child: Center(
+                              child: Text(
+                                'No matching places found.',
+                                style: TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontSize: 12,
+                                  color: AppColors.secondaryText,
+                                ),
+                              ),
+                            ),
+                          ),
+                  ),
+
+                  // Saved Addresses Section (if available)
+                  if (savedAddresses.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    const Divider(height: 1, color: AppColors.border),
+                    const SizedBox(height: 10),
+                    const Text(
+                      'Saved Addresses',
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.secondaryText,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    ...savedAddresses.take(3).map((addr) {
+                      return ListTile(
+                        dense: true,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                        leading: const Icon(Icons.bookmark_border, color: AppColors.accent, size: 20),
+                        title: Text(
+                          addr.label,
+                          style: const TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        subtitle: Text(
+                          addr.formattedAddress,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.secondaryText),
+                        ),
+                        onTap: () {
+                          _controller.updateLocation(
+                            address: addr.formattedAddress,
+                            lat: 27.1025,
+                            lng: 93.6160,
+                          );
+                          Navigator.of(ctx).pop();
+                        },
+                      );
+                    }),
+                  ],
+                ],
+              ),
+            );
+          },
         );
       },
     );
@@ -183,126 +397,84 @@ class _GrievanceLocationScreenState extends State<GrievanceLocationScreen> {
                       ),
                       const GrievanceStepProgressIndicator(currentStep: 3),
                       const SizedBox(height: 8),
-                      const Text(
-                        'Location',
-                        style: TextStyle(
-                          fontFamily: 'Poppins',
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.primaryText,
-                        ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Location',
+                            style: TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.primaryText,
+                            ),
+                          ),
+                          InkWell(
+                            onTap: _isAcquiringLocation ? null : _detectCurrentLocation,
+                            borderRadius: BorderRadius.circular(8),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (_isAcquiringLocation)
+                                    const SizedBox(
+                                      width: 12,
+                                      height: 12,
+                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                    )
+                                  else
+                                    const Icon(
+                                      Icons.gps_fixed_rounded,
+                                      size: 16,
+                                      color: AppColors.accent,
+                                    ),
+                                  const SizedBox(width: 4),
+                                  const Text(
+                                    'GPS Location',
+                                    style: TextStyle(
+                                      fontFamily: 'Poppins',
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.accent,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
                 ),
                 const SizedBox(height: 12),
 
-                // Interactive map container
+                // Real Interactive Google Map View (with test/offline fallback)
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(18),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFE4EDE7),
-                          border: Border.all(color: AppColors.border),
-                          borderRadius: BorderRadius.circular(18),
-                        ),
-                        child: LayoutBuilder(
-                          builder: (context, constraints) {
-                            return GestureDetector(
-                              onTapDown: (details) {
-                                setState(() {
-                                  _pinPosition = Offset(
-                                    details.localPosition.dx / constraints.maxWidth,
-                                    details.localPosition.dy / constraints.maxHeight,
-                                  );
-                                });
-                              },
-                              child: Stack(
-                                children: [
-                                  // Vector street grid pattern simulating map
-                                  CustomPaint(
-                                    size: Size(constraints.maxWidth, constraints.maxHeight),
-                                    painter: _MapCanvasPainter(),
-                                  ),
-
-                                  // Location Pin Marker
-                                  Positioned(
-                                    left: _pinPosition.dx * constraints.maxWidth - 18,
-                                    top: _pinPosition.dy * constraints.maxHeight - 36,
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Container(
-                                          padding: const EdgeInsets.all(6),
-                                          decoration: BoxDecoration(
-                                            color: AppColors.accent,
-                                            shape: BoxShape.circle,
-                                            boxShadow: [
-                                              BoxShadow(
-                                                color: Colors.black.withValues(alpha: 0.25),
-                                                blurRadius: 6,
-                                                offset: const Offset(0, 3),
-                                              ),
-                                            ],
-                                          ),
-                                          child: const Icon(
-                                            Icons.location_on,
-                                            color: AppColors.white,
-                                            size: 22,
-                                          ),
-                                        ),
-                                        Container(
-                                          width: 4,
-                                          height: 6,
-                                          decoration: const BoxDecoration(
-                                            color: AppColors.accent,
-                                          ),
-                                        ),
-                                        Container(
-                                          width: 8,
-                                          height: 3,
-                                          decoration: BoxDecoration(
-                                            color: Colors.black.withValues(alpha: 0.2),
-                                            shape: BoxShape.circle,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-
-                                  // Re-center floating button
-                                  Positioned(
-                                    bottom: 12,
-                                    right: 12,
-                                    child: FloatingActionButton.small(
-                                      heroTag: 'recenter_pin_btn',
-                                      backgroundColor: AppColors.white,
-                                      foregroundColor: AppColors.primary,
-                                      elevation: 2,
-                                      onPressed: () {
-                                        setState(() {
-                                          _pinPosition = const Offset(0.5, 0.45);
-                                        });
-                                      },
-                                      child: const Icon(Icons.my_location_rounded, size: 20),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
-                      ),
+                    child: SmartGoogleMapView(
+                      latitude: draft.latitude,
+                      longitude: draft.longitude,
+                      zoom: 15.0,
+                      isInteractive: true,
+                      onLocationChanged: (lat, lng) async {
+                        // Reverse geocode to keep readable address in sync with marker
+                        final address = await _placesService.reverseGeocode(lat, lng);
+                        _controller.updateLocation(
+                          address: address,
+                          lat: lat,
+                          lng: lng,
+                        );
+                      },
                     ),
                   ),
                 ),
 
                 const SizedBox(height: 14),
 
-                // Selected Location Card
+                // Selected Location & Verification Card
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Container(
@@ -312,46 +484,99 @@ class _GrievanceLocationScreenState extends State<GrievanceLocationScreen> {
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(color: AppColors.border),
                     ),
-                    child: Row(
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: AppColors.secondarySurface,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Icon(
-                            Icons.location_on_outlined,
-                            color: AppColors.primary,
-                            size: 20,
-                          ),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: AppColors.secondarySurface,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Icon(
+                                Icons.location_on_outlined,
+                                color: AppColors.primary,
+                                size: 20,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Wrap(
+                                    crossAxisAlignment: WrapCrossAlignment.center,
+                                    spacing: 8,
+                                    runSpacing: 4,
+                                    children: [
+                                      const Text(
+                                        'Selected Location',
+                                        style: TextStyle(
+                                          fontFamily: 'Poppins',
+                                          fontSize: 11,
+                                          color: AppColors.secondaryText,
+                                        ),
+                                      ),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFE5F5E9),
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: const Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(Icons.check_circle, size: 10, color: AppColors.success),
+                                            SizedBox(width: 3),
+                                            Text(
+                                              'Verified',
+                                              style: TextStyle(
+                                                fontFamily: 'Poppins',
+                                                fontSize: 9,
+                                                fontWeight: FontWeight.w600,
+                                                color: AppColors.success,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    draft.locationAddress,
+                                    style: const TextStyle(
+                                      fontFamily: 'Poppins',
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.primaryText,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'GPS: ${draft.latitude.toStringAsFixed(4)}° N, ${draft.longitude.toStringAsFixed(4)}° E',
+                                    style: const TextStyle(
+                                      fontFamily: 'Poppins',
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w500,
+                                      color: AppColors.secondaryText,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Selected Location',
-                                style: TextStyle(
-                                  fontFamily: 'Poppins',
-                                  fontSize: 11,
-                                  color: AppColors.secondaryText,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                draft.locationAddress,
-                                style: const TextStyle(
-                                  fontFamily: 'Poppins',
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.primaryText,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              GestureDetector(
+                        const SizedBox(height: 10),
+                        const Divider(height: 1, color: AppColors.border),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: GestureDetector(
                                 onTap: _onChangeLocationModal,
                                 child: const Text(
                                   'Change Location',
@@ -363,8 +588,27 @@ class _GrievanceLocationScreenState extends State<GrievanceLocationScreen> {
                                   ),
                                 ),
                               ),
-                            ],
-                          ),
+                            ),
+                            GestureDetector(
+                              onTap: () {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    duration: const Duration(seconds: 2),
+                                    content: Text('Viewing Google Maps for ${draft.latitude.toStringAsFixed(4)}, ${draft.longitude.toStringAsFixed(4)}'),
+                                  ),
+                                );
+                              },
+                              child: const Text(
+                                'Google Maps View',
+                                style: TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -412,73 +656,4 @@ class _GrievanceLocationScreenState extends State<GrievanceLocationScreen> {
       },
     );
   }
-}
-
-/// Custom vector painter representing map roads and terrain
-class _MapCanvasPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final bgPaint = Paint()..color = const Color(0xFFE9F0EC);
-    canvas.drawRect(Offset.zero & size, bgPaint);
-
-    // Green space patches
-    final parkPaint = Paint()..color = const Color(0xFFD6E8DF);
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(size.width * 0.1, size.height * 0.1, size.width * 0.35, size.height * 0.25),
-        const Radius.circular(8),
-      ),
-      parkPaint,
-    );
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(size.width * 0.65, size.height * 0.55, size.width * 0.28, size.height * 0.35),
-        const Radius.circular(8),
-      ),
-      parkPaint,
-    );
-
-    // Main road
-    final roadPaint = Paint()
-      ..color = Colors.white
-      ..strokeWidth = 14
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-
-    final roadBorder = Paint()
-      ..color = const Color(0xFFD1DDD6)
-      ..strokeWidth = 16
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-
-    // Diagonal road
-    final path = Path()
-      ..moveTo(0, size.height * 0.3)
-      ..lineTo(size.width, size.height * 0.7);
-
-    canvas.drawPath(path, roadBorder);
-    canvas.drawPath(path, roadPaint);
-
-    // Cross road
-    final crossPath = Path()
-      ..moveTo(size.width * 0.2, size.height)
-      ..lineTo(size.width * 0.8, 0);
-
-    canvas.drawPath(crossPath, roadBorder);
-    canvas.drawPath(crossPath, roadPaint);
-
-    // Minor street
-    final minorPaint = Paint()
-      ..color = Colors.white
-      ..strokeWidth = 8
-      ..style = PaintingStyle.stroke;
-    canvas.drawLine(
-      Offset(0, size.height * 0.8),
-      Offset(size.width, size.height * 0.8),
-      minorPaint,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

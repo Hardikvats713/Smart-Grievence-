@@ -71,6 +71,7 @@ class Grievance {
     this.longitude,
     this.attachmentCount = 0,
     this.attachmentPaths = const [],
+    this.attachmentBytes = const [],
     this.submittedDate = '18 Mar 2025',
     this.lastUpdatedText = 'Updated recently',
     this.timeline = const [],
@@ -93,6 +94,7 @@ class Grievance {
   final double? longitude;
   final int attachmentCount;
   final List<String> attachmentPaths;
+  final List<dynamic> attachmentBytes;
   final String submittedDate;
   final String lastUpdatedText;
   final List<GrievanceTimelineEvent> timeline;
@@ -115,6 +117,7 @@ class Grievance {
     double? longitude,
     int? attachmentCount,
     List<String>? attachmentPaths,
+    List<dynamic>? attachmentBytes,
     String? submittedDate,
     String? lastUpdatedText,
     List<GrievanceTimelineEvent>? timeline,
@@ -137,6 +140,7 @@ class Grievance {
       longitude: longitude ?? this.longitude,
       attachmentCount: attachmentCount ?? this.attachmentCount,
       attachmentPaths: attachmentPaths ?? this.attachmentPaths,
+      attachmentBytes: attachmentBytes ?? this.attachmentBytes,
       submittedDate: submittedDate ?? this.submittedDate,
       lastUpdatedText: lastUpdatedText ?? this.lastUpdatedText,
       timeline: timeline ?? this.timeline,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../logic/grievance_controller.dart';
 import '../widgets/grievance_header.dart';
+import '../widgets/grievance_media_picker.dart';
 import '../widgets/grievance_step_progress_indicator.dart';
 
 /// Screen 09 — Submit Grievance: Details.
@@ -48,8 +49,13 @@ class _GrievanceDetailsScreenState extends State<GrievanceDetailsScreen> {
     }
   }
 
-  void _addMockPhoto() {
-    _controller.addAttachment('photo_${DateTime.now().millisecondsSinceEpoch}.jpg');
+  void _openMediaPicker() {
+    showGrievanceMediaPicker(
+      context: context,
+      onMediaPicked: (name, bytes) {
+        _controller.addAttachment(name, bytes: bytes);
+      },
+    );
   }
 
   @override
@@ -228,74 +234,11 @@ class _GrievanceDetailsScreenState extends State<GrievanceDetailsScreen> {
                           ),
                           const SizedBox(height: 8),
 
-                          Row(
-                            children: [
-                              // Existing attachments
-                              ...draft.attachments.asMap().entries.map((entry) {
-                                final idx = entry.key;
-                                return Stack(
-                                  children: [
-                                    Container(
-                                      width: 60,
-                                      height: 60,
-                                      margin: const EdgeInsets.only(right: 12),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.secondarySurface,
-                                        borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(color: AppColors.border),
-                                      ),
-                                      child: const Icon(
-                                        Icons.image_outlined,
-                                        color: AppColors.primary,
-                                        size: 28,
-                                      ),
-                                    ),
-                                    Positioned(
-                                      top: 2,
-                                      right: 14,
-                                      child: GestureDetector(
-                                        onTap: () => _controller.removeAttachment(idx),
-                                        child: Container(
-                                          padding: const EdgeInsets.all(2),
-                                          decoration: const BoxDecoration(
-                                            color: AppColors.error,
-                                            shape: BoxShape.circle,
-                                          ),
-                                          child: const Icon(
-                                            Icons.close,
-                                            size: 10,
-                                            color: AppColors.white,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                );
-                              }),
-
-                              // Plus button
-                              InkWell(
-                                onTap: _addMockPhoto,
-                                borderRadius: BorderRadius.circular(12),
-                                child: Container(
-                                  width: 60,
-                                  height: 60,
-                                  decoration: BoxDecoration(
-                                    color: AppColors.white,
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                      color: AppColors.border,
-                                      style: BorderStyle.solid,
-                                    ),
-                                  ),
-                                  child: const Icon(
-                                    Icons.add,
-                                    color: AppColors.primary,
-                                    size: 24,
-                                  ),
-                                ),
-                              ),
-                            ],
+                          GrievanceMediaThumbnails(
+                            attachments: draft.attachments,
+                            attachmentBytes: draft.attachmentBytes,
+                            onAddTap: _openMediaPicker,
+                            onRemoveTap: (idx) => _controller.removeAttachment(idx),
                           ),
                           const SizedBox(height: 32),
                         ],

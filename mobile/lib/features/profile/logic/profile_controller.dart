@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// User profile domain entity.
 class UserProfile {
@@ -50,6 +52,14 @@ class StubProfileController extends ChangeNotifier implements ProfileController 
   StubProfileController();
 
   static final StubProfileController instance = StubProfileController();
+
+  static const String _prefFullName = 'sg_user_fullName';
+  static const String _prefEmail = 'sg_user_email';
+  static const String _prefDistrict = 'sg_user_district';
+  static const String _prefPhone = 'sg_user_phone';
+  static const String _prefPhotoPath = 'sg_user_photoPath';
+  static const String _prefPhotoBase64 = 'sg_user_photoBase64';
+
   static UserProfile? _storedProfile = const UserProfile(
     fullName: 'Rahul Sharma',
     email: 'rahul.sharma@email.com',
@@ -60,8 +70,45 @@ class StubProfileController extends ChangeNotifier implements ProfileController 
   @override
   UserProfile? get currentProfile => _storedProfile;
 
+  /// Loads persisted citizen profile & avatar bytes from disk (SharedPreferences).
+  Future<void> loadFromStorage() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final name = prefs.getString(_prefFullName);
+      if (name != null && name.trim().isNotEmpty) {
+        Uint8List? photoBytes;
+        final b64 = prefs.getString(_prefPhotoBase64);
+        if (b64 != null && b64.isNotEmpty) {
+          try {
+            photoBytes = base64Decode(b64);
+          } catch (_) {}
+        }
+
+        _storedProfile = UserProfile(
+          fullName: name,
+          email: prefs.getString(_prefEmail),
+          district: prefs.getString(_prefDistrict) ?? 'Papum Pare',
+          phoneNumber: prefs.getString(_prefPhone) ?? '9876543210',
+          photoPath: prefs.getString(_prefPhotoPath),
+          photoBytes: photoBytes,
+        );
+        notifyListeners();
+      }
+    } catch (_) {
+      // Handled silently during widget test / headless execution
+    }
+  }
+
   void clearSession() {
     _storedProfile = null;
+    SharedPreferences.getInstance().then((prefs) {
+      prefs.remove(_prefFullName);
+      prefs.remove(_prefEmail);
+      prefs.remove(_prefDistrict);
+      prefs.remove(_prefPhone);
+      prefs.remove(_prefPhotoPath);
+      prefs.remove(_prefPhotoBase64);
+    }).catchError((_) {});
     notifyListeners();
   }
 
@@ -90,6 +137,32 @@ class StubProfileController extends ChangeNotifier implements ProfileController 
     }
 
     _storedProfile = profile;
+
+    // Persist to SharedPreferences so profile photo and data survive app restarts
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_prefFullName, profile.fullName);
+      if (profile.email != null && profile.email!.isNotEmpty) {
+        await prefs.setString(_prefEmail, profile.email!);
+      } else {
+        await prefs.remove(_prefEmail);
+      }
+      await prefs.setString(_prefDistrict, profile.district);
+      await prefs.setString(_prefPhone, profile.phoneNumber);
+      if (profile.photoPath != null && profile.photoPath!.isNotEmpty) {
+        await prefs.setString(_prefPhotoPath, profile.photoPath!);
+      } else {
+        await prefs.remove(_prefPhotoPath);
+      }
+      if (profile.photoBytes != null && profile.photoBytes!.isNotEmpty) {
+        await prefs.setString(_prefPhotoBase64, base64Encode(profile.photoBytes!));
+      } else {
+        await prefs.remove(_prefPhotoBase64);
+      }
+    } catch (_) {
+      // Handled silently during pure unit tests without services binding
+    }
+
     notifyListeners();
     return const ProfileResult(
       isSuccess: true,
