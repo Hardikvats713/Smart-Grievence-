@@ -10,9 +10,10 @@ class GrievanceDraft {
     this.category,
     this.title = '',
     this.description = '',
-    this.locationAddress = 'Main Road, Sector 12, Itanagar, Arunachal Pradesh',
+    this.locationAddress = '',
     this.latitude = 27.1025,
     this.longitude = 93.6160,
+    this.isLocationConfirmed = false,
     this.attachments = const [],
     this.attachmentBytes = const [],
   });
@@ -23,12 +24,13 @@ class GrievanceDraft {
   final String locationAddress;
   final double latitude;
   final double longitude;
+  final bool isLocationConfirmed;
   final List<String> attachments;
   final List<dynamic> attachmentBytes;
 
   bool get isCategoryValid => category != null;
   bool get isDetailsValid => title.trim().isNotEmpty && description.trim().isNotEmpty;
-  bool get isLocationValid => locationAddress.trim().isNotEmpty;
+  bool get isLocationValid => isLocationConfirmed && locationAddress.trim().isNotEmpty;
   bool get isComplete => isCategoryValid && isDetailsValid && isLocationValid;
 
   GrievanceDraft copyWith({
@@ -38,6 +40,7 @@ class GrievanceDraft {
     String? locationAddress,
     double? latitude,
     double? longitude,
+    bool? isLocationConfirmed,
     List<String>? attachments,
     List<dynamic>? attachmentBytes,
   }) {
@@ -48,6 +51,7 @@ class GrievanceDraft {
       locationAddress: locationAddress ?? this.locationAddress,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
+      isLocationConfirmed: isLocationConfirmed ?? this.isLocationConfirmed,
       attachments: attachments ?? this.attachments,
       attachmentBytes: attachmentBytes ?? this.attachmentBytes,
     );
@@ -108,11 +112,13 @@ class GrievanceController extends ChangeNotifier {
     required String address,
     required double lat,
     required double lng,
+    bool isConfirmed = true,
   }) {
     _draft = _draft.copyWith(
       locationAddress: address,
       latitude: lat,
       longitude: lng,
+      isLocationConfirmed: isConfirmed,
     );
     notifyListeners();
   }

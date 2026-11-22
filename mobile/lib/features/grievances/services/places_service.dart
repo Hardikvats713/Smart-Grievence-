@@ -40,11 +40,28 @@ class PlaceSuggestion {
   }
 }
 
-/// Real-time Google Places Autocomplete & Geocoding Service with local civic database fallback.
+/// Rich search result containing suggestions and any service diagnostics.
+class PlacesSearchResult {
+  const PlacesSearchResult({
+    required this.suggestions,
+    this.apiErrorMessage,
+    this.isFromGoogle = false,
+  });
+
+  final List<PlaceSuggestion> suggestions;
+  final String? apiErrorMessage;
+  final bool isFromGoogle;
+}
+
+/// Real-time Google Places Autocomplete, OpenStreetMap Nominatim Live Fallback,
+/// and Geocoding Service with local civic database.
 class PlacesService {
   PlacesService({http.Client? client}) : _client = client ?? http.Client();
 
   final http.Client _client;
+
+  String? _lastErrorMessage;
+  String? get lastErrorMessage => _lastErrorMessage;
 
   /// Curated regional civic database for Itanagar Capital Complex, Arunachal Pradesh.
   static const List<PlaceSuggestion> civicLandmarks = [
@@ -154,16 +171,19 @@ class PlacesService {
     ),
   ];
 
-  /// Queries Google Places Autocomplete API when configured, falling back to civic landmarks.
-  Future<List<PlaceSuggestion>> searchPlaces(String query) async {
+  /// Queries Google Places Autocomplete API, falling back cleanly to live online geocoding
+  /// and local civic landmarks if Google API billing is pending or unauthorized.
+  Future<PlacesSearchResult> searchPlacesDetailed(String query) async {
     final cleanQuery = query.trim();
     if (cleanQuery.isEmpty) {
-      return civicLandmarks;
+      _lastErrorMessage = null;
+      return const PlacesSearchResult(suggestions: civicLandmarks);
     }
 
+    // 1. Try Google Places Autocomplete (New or Legacy)
     if (AppConfig.hasGooglePlacesKey) {
       try {
-        final uri = Uri.parse(
+        final legacyUri = Uri.parse(
           'https://maps.googleapis.com/maps/api/place/autocomplete/json?'
           'input=${Uri.encodeComponent(cleanQuery)}&'
           'components=country:in&'
@@ -171,45 +191,124 @@ class PlacesService {
           'key=${AppConfig.googlePlacesApiKey}',
         );
 
-        final response = await _client.get(uri).timeout(const Duration(seconds: 4));
+        final response = await _client.get(legacyUri).timeout(const Duration(seconds: 4));
         if (response.statusCode == 200) {
           final data = jsonDecode(response.body) as Map<String, dynamic>;
-          final predictions = data['predictions'] as List<dynamic>?;
-          if (predictions != null && predictions.isNotEmpty) {
-            return predictions.map((p) {
-              final placeId = p['place_id'] as String? ?? 'p-${DateTime.now().millisecondsSinceEpoch}';
-              final desc = p['description'] as String? ?? cleanQuery;
-              final structured = p['structured_formatting'] as Map<String, dynamic>?;
-              final mainText = structured?['main_text'] as String? ?? desc.split(',').first;
-              final secondaryText = structured?['secondary_text'] as String? ?? 'Arunachal Pradesh, India';
+          final status = data['status'] as String?;
 
-              return PlaceSuggestion(
-                id: placeId,
-                name: mainText,
-                area: secondaryText,
-                fullAddress: desc,
-                isGooglePlace: true,
-              );
-            }).toList();
+          if (status == 'OK') {
+            final predictions = data['predictions'] as List<dynamic>?;
+            if (predictions != null && predictions.isNotEmpty) {
+              _lastErrorMessage = null;
+              final list = predictions.map((p) {
+                final placeId = p['place_id'] as String? ?? 'p-${DateTime.now().millisecondsSinceEpoch}';
+                final desc = p['description'] as String? ?? cleanQuery;
+                final structured = p['structured_formatting'] as Map<String, dynamic>?;
+                final mainText = structured?['main_text'] as String? ?? desc.split(',').first;
+                final secondaryText = structured?['secondary_text'] as String? ?? 'Arunachal Pradesh, India';
+
+                return PlaceSuggestion(
+                  id: placeId,
+                  name: mainText,
+                  area: secondaryText,
+                  fullAddress: desc,
+                  isGooglePlace: true,
+                );
+              }).toList();
+
+              return PlacesSearchResult(suggestions: list, isFromGoogle: true);
+            }
+          } else if (status == 'REQUEST_DENIED' || status == 'OVER_QUERY_LIMIT') {
+            final err = data['error_message'] as String? ?? status;
+            _lastErrorMessage = 'Google Places API: $err';
+            if (kDebugMode) {
+              debugPrint('[PlacesService] Google Places denied: $err');
+            }
           }
         }
       } catch (e) {
+        _lastErrorMessage = 'Google Places connection error: $e';
         if (kDebugMode) {
-          debugPrint('[PlacesService] Google Places Autocomplete query failed: $e');
+          debugPrint('[PlacesService] Google Places Autocomplete query error: $e');
         }
       }
     }
 
-    // Local matching fallback
+    // 2. Query Live OpenStreetMap Nominatim Geocoder
+    List<PlaceSuggestion> liveResults = [];
+    try {
+      final nominatimUri = Uri.parse(
+        'https://nominatim.openstreetmap.org/search?'
+        'q=${Uri.encodeComponent(cleanQuery)}&'
+        'format=json&'
+        'countrycodes=in&'
+        'limit=6',
+      );
+
+      final nomResponse = await _client.get(
+        nominatimUri,
+        headers: {'User-Agent': 'SmartGrievanceApp/1.0'},
+      ).timeout(const Duration(seconds: 4));
+
+      if (nomResponse.statusCode == 200) {
+        final items = jsonDecode(nomResponse.body) as List<dynamic>;
+        for (final item in items) {
+          final displayName = item['display_name'] as String? ?? '';
+          final parts = displayName.split(',');
+          final name = parts.isNotEmpty ? parts.first.trim() : cleanQuery;
+          final area = parts.length > 1 ? parts.sublist(1, math.min(3, parts.length)).join(',').trim() : 'India';
+          final lat = double.tryParse(item['lat']?.toString() ?? '');
+          final lon = double.tryParse(item['lon']?.toString() ?? '');
+
+          liveResults.add(
+            PlaceSuggestion(
+              id: 'osm-${item['place_id']}',
+              name: name,
+              area: area,
+              fullAddress: displayName,
+              latitude: lat,
+              longitude: lon,
+              isGooglePlace: false,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('[PlacesService] Nominatim fallback failed: $e');
+      }
+    }
+
+    // 3. Local curated landmarks match
     final q = cleanQuery.toLowerCase();
-    return civicLandmarks.where((place) {
+    final localMatches = civicLandmarks.where((place) {
       return place.name.toLowerCase().contains(q) ||
           place.area.toLowerCase().contains(q) ||
           place.fullAddress.toLowerCase().contains(q);
     }).toList();
+
+    // Merge live results with local matches (avoid duplicates)
+    final combined = <PlaceSuggestion>[...liveResults];
+    for (final loc in localMatches) {
+      if (!combined.any((p) => p.name.toLowerCase() == loc.name.toLowerCase())) {
+        combined.add(loc);
+      }
+    }
+
+    return PlacesSearchResult(
+      suggestions: combined,
+      apiErrorMessage: _lastErrorMessage,
+      isFromGoogle: false,
+    );
   }
 
-  /// Resolves exact lat/lng coordinates for a Google Place ID or returns existing coordinates.
+  /// Convenience wrapper returning just suggestions list.
+  Future<List<PlaceSuggestion>> searchPlaces(String query) async {
+    final result = await searchPlacesDetailed(query);
+    return result.suggestions;
+  }
+
+  /// Resolves exact lat/lng coordinates for a Place suggestion.
   Future<PlaceSuggestion> resolveCoordinates(PlaceSuggestion suggestion) async {
     if (suggestion.latitude != null && suggestion.longitude != null) {
       return suggestion;
@@ -252,7 +351,6 @@ class PlacesService {
       }
     }
 
-    // Default to nearest civic coordinate or Itanagar center
     return suggestion.copyWith(
       latitude: AppConfig.defaultLatitude,
       longitude: AppConfig.defaultLongitude,
@@ -261,6 +359,7 @@ class PlacesService {
 
   /// Reverse geocodes coordinates to a human-readable street address.
   Future<String> reverseGeocode(double latitude, double longitude) async {
+    // 1. Try Google Geocoding
     if (AppConfig.hasGooglePlacesKey) {
       try {
         final uri = Uri.parse(
@@ -272,11 +371,13 @@ class PlacesService {
         final response = await _client.get(uri).timeout(const Duration(seconds: 4));
         if (response.statusCode == 200) {
           final data = jsonDecode(response.body) as Map<String, dynamic>;
-          final results = data['results'] as List<dynamic>?;
-          if (results != null && results.isNotEmpty) {
-            final formatted = results.first['formatted_address'] as String?;
-            if (formatted != null && formatted.isNotEmpty) {
-              return formatted;
+          if (data['status'] == 'OK') {
+            final results = data['results'] as List<dynamic>?;
+            if (results != null && results.isNotEmpty) {
+              final formatted = results.first['formatted_address'] as String?;
+              if (formatted != null && formatted.isNotEmpty) {
+                return formatted;
+              }
             }
           }
         }
@@ -287,7 +388,32 @@ class PlacesService {
       }
     }
 
-    // Find closest local landmark
+    // 2. Try Nominatim Reverse Geocoding
+    try {
+      final nomUri = Uri.parse(
+        'https://nominatim.openstreetmap.org/reverse?'
+        'lat=$latitude&lon=$longitude&format=json',
+      );
+
+      final nomResponse = await _client.get(
+        nomUri,
+        headers: {'User-Agent': 'SmartGrievanceApp/1.0'},
+      ).timeout(const Duration(seconds: 4));
+
+      if (nomResponse.statusCode == 200) {
+        final data = jsonDecode(nomResponse.body) as Map<String, dynamic>;
+        final displayName = data['display_name'] as String?;
+        if (displayName != null && displayName.isNotEmpty) {
+          return displayName;
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('[PlacesService] Nominatim Reverse Geocoding failed: $e');
+      }
+    }
+
+    // 3. Fallback: Find closest local landmark
     PlaceSuggestion? closest;
     double minDistance = double.infinity;
     for (final landmark in civicLandmarks) {

@@ -117,6 +117,11 @@ void main() {
         title: 'Pothole on main road',
         description: 'Large pothole near bus stop causing traffic issues.',
       );
+      controller.updateLocation(
+        address: 'Main Road, Sector 12, Itanagar',
+        lat: 27.1025,
+        lng: 93.6160,
+      );
 
       await tester.pumpWidget(
         _buildTestWrapper(home: ReviewSubmitScreen(controller: controller)),
