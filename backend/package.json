@@ -1,0 +1,17 @@
+{
+  "name": "smart-grievance-backend",
+  "version": "1.0.0",
+  "description": "REST API backend for Smart Grievance Arunachal Pradesh",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test test/server.test.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.119.2",
+    "cors": "^2.8.5",
+    "dotenv": "^18.0.10",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2"
+  }
+}

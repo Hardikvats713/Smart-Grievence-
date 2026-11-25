@@ -1,7 +1,14 @@
-/// Environment-based configuration for Google Maps & Places APIs.
+/// Environment-based configuration for Smart Grievance API, Google Maps & Places APIs.
 /// Keys are provided via `--dart-define` at compile or run time.
 /// NEVER hardcode production keys in source control.
 abstract final class AppConfig {
+  /// Backend REST API v1 Base URL.
+  /// Pass via: `flutter run --dart-define=API_BASE_URL=http://10.0.2.2:3000/api/v1`
+  static const String apiBaseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: 'http://localhost:3000/api/v1',
+  );
+
   /// Google Maps Android / iOS SDK API Key.
   /// Pass via: `flutter run --dart-define=GOOGLE_MAPS_API_KEY=AIzaSy...`
   static const String googleMapsApiKey = String.fromEnvironment(

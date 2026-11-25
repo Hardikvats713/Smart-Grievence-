@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../../app/router.dart';
+import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_colors.dart';
 import '../logic/auth_controller.dart';
+import '../logic/remote_auth_service.dart';
 import '../widgets/otp_input_fields.dart';
 import '../widgets/resend_otp_control.dart';
 
@@ -41,7 +43,7 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
   @override
   void initState() {
     super.initState();
-    _auth = widget.authController ?? StubAuthController();
+    _auth = widget.authController ?? RemoteAuthController();
   }
 
   @override
@@ -104,10 +106,22 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
           duration: Duration(seconds: 2),
         ),
       );
-      Navigator.of(context).pushNamed(
-        AppRouter.setupProfile,
-        arguments: _effectivePhone,
-      );
+      final activeRole = await ApiClient.getActiveRole();
+      final roles = await ApiClient.getRoles();
+      if (!mounted) return;
+
+      if (roles.length > 1) {
+        Navigator.of(context).pushReplacementNamed(AppRouter.roleSelection);
+      } else if (activeRole == 'DEPARTMENT_OFFICER' ||
+          activeRole == 'SENIOR_OFFICER' ||
+          activeRole == 'ADMINISTRATOR') {
+        Navigator.of(context).pushReplacementNamed(AppRouter.officerDashboard);
+      } else {
+        Navigator.of(context).pushNamed(
+          AppRouter.setupProfile,
+          arguments: _effectivePhone,
+        );
+      }
     } else {
       setState(() {
         _errorMessage = result.message ?? 'Invalid or expired OTP. Please try again.';

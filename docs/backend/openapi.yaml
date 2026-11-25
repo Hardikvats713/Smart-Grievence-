@@ -1,0 +1,270 @@
+openapi: 3.0.3
+info:
+  title: Smart Grievance Management System API
+  description: Enterprise REST API for Citizen Grievance Redressal and Department Investigation (Arunachal Pradesh).
+  version: 1.0.0
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Local Development Server
+  - url: https://api.smartgrievance.arunachal.gov.in/api/v1
+    description: Production Server
+
+paths:
+  /health:
+    get:
+      summary: Health check endpoint
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              example:
+                success: true
+                message: "Smart Grievance API v1 is operational"
+                data:
+                  status: healthy
+                  version: "1.0.0"
+
+  /auth/send-otp:
+    post:
+      summary: Send OTP to mobile phone
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phoneNumber]
+              properties:
+                phoneNumber:
+                  type: string
+                  example: "+919876543210"
+      responses:
+        '200':
+          description: OTP dispatched successfully
+
+  /auth/verify-otp:
+    post:
+      summary: Verify OTP and receive JWT tokens with active roles
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phoneNumber, otp]
+              properties:
+                phoneNumber:
+                  type: string
+                  example: "+919876543210"
+                otp:
+                  type: string
+                  example: "123456"
+      responses:
+        '200':
+          description: Authenticated session issued
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      user: { type: object }
+                      roles: { type: array, items: { type: string } }
+                      activeRole: { type: string }
+                      accessToken: { type: string }
+                      refreshToken: { type: string }
+
+  /auth/switch-role:
+    post:
+      summary: Switch active operational role
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [role]
+              properties:
+                role: { type: string, enum: [CITIZEN, DEPARTMENT_OFFICER, SENIOR_OFFICER, ADMINISTRATOR] }
+      responses:
+        '200':
+          description: Role switched and new token issued
+
+  /grievances:
+    get:
+      summary: List grievances (filtered by user role and jurisdiction)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string }
+        - name: departmentId
+          in: query
+          schema: { type: string }
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 20 }
+      responses:
+        '200':
+          description: List of grievances
+    post:
+      summary: Submit a new citizen grievance
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [categoryId, title, description, latitude, longitude, locationAddress]
+              properties:
+                categoryId: { type: string }
+                title: { type: string }
+                description: { type: string }
+                latitude: { type: number }
+                longitude: { type: number }
+                locationAddress: { type: string }
+                attachments: { type: array, items: { type: object } }
+      responses:
+        '201':
+          description: Grievance registered successfully
+
+  /grievances/{id}:
+    get:
+      summary: Retrieve detailed grievance by ID including timeline
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Grievance details with full timeline
+
+  /grievances/{id}/feedback:
+    post:
+      summary: Submit citizen resolution feedback
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [rating]
+              properties:
+                rating: { type: integer, minimum: 1, maximum: 5 }
+                comments: { type: string }
+      responses:
+        '200':
+          description: Feedback recorded
+
+  /grievances/{id}/reopen:
+    post:
+      summary: Request reopening of resolved grievance
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string }
+                attachments: { type: array, items: { type: string } }
+      responses:
+        '200':
+          description: Reopening request submitted
+
+  /officer/grievances:
+    get:
+      summary: List grievances assigned to the department officer's jurisdiction
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Officer queue
+
+  /officer/grievances/{id}/status:
+    patch:
+      summary: Update grievance investigation/resolution status
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [IN_PROGRESS, FIELD_INSPECTION, RESOLUTION_PROPOSED, RESOLVED]
+                remarks: { type: string }
+                resolutionProof: { type: array, items: { type: string } }
+      responses:
+        '200':
+          description: Status updated
+
+  /officer/grievances/{id}/remarks:
+    post:
+      summary: Add an internal investigation remark
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [remark]
+              properties:
+                remark: { type: string }
+                isInternal: { type: boolean, default: true }
+      responses:
+        '201':
+          description: Remark logged
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

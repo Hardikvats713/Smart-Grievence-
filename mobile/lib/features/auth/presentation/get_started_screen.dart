@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../app/router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../logic/auth_controller.dart';
+import '../logic/remote_auth_service.dart';
 import '../widgets/mobile_number_field.dart';
 import '../widgets/send_otp_button.dart';
 
@@ -20,7 +21,7 @@ class _GetStartedScreenState extends State<GetStartedScreen> {
   // ── State ────────────────────────────────────────────────────────────────
   final TextEditingController _phoneController = TextEditingController();
   final FocusNode _phoneFocus = FocusNode();
-  final AuthController _auth = StubAuthController();
+  final AuthController _auth = RemoteAuthController();
 
   String _phone = '';
   String? _errorText;
@@ -206,6 +207,52 @@ class _GetStartedScreenState extends State<GetStartedScreen> {
                                 ),
                               ),
                             ),
+                            const SizedBox(height: 16),
+                            const Text(
+                              'Role-Based Login (OTP: 123456)',
+                              style: TextStyle(
+                                fontFamily: 'Poppins',
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                                color: AppColors.secondaryText,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 6,
+                              alignment: WrapAlignment.center,
+                              children: [
+                                _RoleQuickChip(
+                                  label: 'Citizen',
+                                  onTap: () {
+                                    _phoneController.text = '9876543210';
+                                    _onPhoneChanged('9876543210');
+                                  },
+                                ),
+                                _RoleQuickChip(
+                                  label: 'Dept Officer',
+                                  onTap: () {
+                                    _phoneController.text = '9436000001';
+                                    _onPhoneChanged('9436000001');
+                                  },
+                                ),
+                                _RoleQuickChip(
+                                  label: 'Senior Officer',
+                                  onTap: () {
+                                    _phoneController.text = '9436000003';
+                                    _onPhoneChanged('9436000003');
+                                  },
+                                ),
+                                _RoleQuickChip(
+                                  label: 'Admin',
+                                  onTap: () {
+                                    _phoneController.text = '9436000004';
+                                    _onPhoneChanged('9436000004');
+                                  },
+                                ),
+                              ],
+                            ),
                           ],
                         ),
                       ),
@@ -239,6 +286,37 @@ class _CityscapeIllustration extends StatelessWidget {
         width: screenWidth,
         fit: BoxFit.fitWidth,
         alignment: Alignment.bottomCenter,
+      ),
+    );
+  }
+}
+
+class _RoleQuickChip extends StatelessWidget {
+  const _RoleQuickChip({required this.label, required this.onTap});
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: AppColors.secondarySurface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(
+            fontFamily: 'Poppins',
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: AppColors.primary,
+          ),
+        ),
       ),
     );
   }

@@ -35,6 +35,9 @@ run_app.sh
 mobile/run_app.bat
 mobile/run_app.sh
 
+# Backend local data
+backend/data/
+
 # IDE / OS
 .idea/
 .vscode/
